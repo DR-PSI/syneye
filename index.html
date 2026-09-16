@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SynEye</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#14181a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SynEye">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+html,body{margin:0;background:#14181a;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+*{box-sizing:border-box}
+a{color:#0d8a7f;text-decoration:none}a:hover{color:#0a6c63}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(13,138,127,.45)}70%{box-shadow:0 0 0 14px rgba(13,138,127,0)}100%{box-shadow:0 0 0 0 rgba(13,138,127,0)}}
+.leaflet-container{font-family:inherit;background:#eef0ec}
+.leaflet-tile{filter:saturate(.5) brightness(1.06) contrast(.96)}
+*::-webkit-scrollbar{width:0;height:0}*{scrollbar-width:none}
+.leaflet-control-attribution{font-size:8px}
+section{width:100%;font-family:'IBM Plex Sans Thai',sans-serif}
+.screen{display:none}
+.screen.active{display:flex}
+</style>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script>
+</head>
+<body>
+<section>
+<div class="screen" data-screen="launcher" data-screen-label="เลือกแอป" style="width:100%;height:100dvh;background:#14181a;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:calc(34px + env(safe-area-inset-top)) 26px calc(30px + env(safe-area-inset-bottom))">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <img src="./syneye-logo.png" alt="SynEye" style="width:76px;height:76px;object-fit:contain">
+      <span style="font-size:30px;font-weight:600;color:#fff;margin-top:14px">SynEye</span>
+      <span data-en="Online booking and live tracking for indoor wiring inspection" style="font-size:14px;color:#9aa3a0;line-height:1.6;max-width:280px">นัดหมายและติดตามงานตรวจสอบสายไฟฟ้าภายใน ผ่านระบบออนไลน์</span>
+    </div>
+    <button data-en="TH" onclick="App.toggleLang(event)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:9px 14px;border:1px solid #2c3438;background:transparent;color:#fff;border-radius:20px;cursor:pointer">EN</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div onclick="App.nav('home')" style="background:#0d8a7f;border-radius:20px;padding:24px;display:flex;align-items:center;gap:16px;cursor:pointer">
+      <span style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:600">ล</span>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <span data-en="Customer app" style="font-size:20px;font-weight:600;color:#fff">แอปลูกค้า</span>
+        <span data-en="Book a slot, track the technician, view results" style="font-size:13px;color:#d3ece8;line-height:1.5">จองคิว ติดตามช่าง ดูผลตรวจสอบ</span>
+      </div>
+      <span style="font-size:26px;color:#fff">›</span>
+    </div>
+    <div onclick="App.nav('queue')" style="background:#1e262b;border-radius:20px;padding:24px;display:flex;align-items:center;gap:16px;cursor:pointer">
+      <span style="width:46px;height:46px;border-radius:14px;background:#2c3947;display:flex;align-items:center;justify-content:center;color:#7fd8cd;font-size:18px;font-weight:600">ช</span>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <span data-en="Technician app" style="font-size:20px;font-weight:600;color:#fff">แอปช่าง</span>
+        <span data-en="Job queue, navigation, inspection records" style="font-size:13px;color:#9aa3a0;line-height:1.5">คิวงาน นำทาง บันทึกผลตรวจสอบ</span>
+      </div>
+      <span style="font-size:26px;color:#fff">›</span>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <span data-en="Add to home screen to use it as an app" style="font-size:12px;color:#9aa3a0">เพิ่มลงหน้าจอหลักเพื่อใช้แบบแอป</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5d6764">PWA v1.0 · map data © OpenStreetMap</span>
+  </div>
+</div>
+
+<div class="screen" data-screen="home" data-screen-label="A-ลูกค้า-หน้าแรก" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="padding:14px 22px 10px;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column">
+              <span data-en="Good morning" style="font-size:13px;color:#6b7472">สวัสดีตอนเช้า</span>
+              <span style="font-size:22px;font-weight:600;color:#14181a">คุณสิทธิพงษ์</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div onclick="App.nav('launcher')" data-en="Switch app" style="font-size:12px;padding:9px 13px;border-radius:18px;border:1px solid #d4d8d2;background:#fff;color:#14181a;cursor:pointer">สลับแอป</div>
+              <div style="width:44px;height:44px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600">ส</div>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 22px 0;display:flex;flex-direction:column;gap:10px">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:18px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <span style="width:8px;height:8px;border-radius:50%;background:#0d8a7f"></span>
+                <span data-en="Upcoming appointment" style="font-size:12px;font-weight:600;letter-spacing:.04em;color:#0d8a7f">นัดหมายที่กำลังจะถึง</span>
+              </div>
+              <div style="font-size:19px;font-weight:600;color:#14181a">พฤหัสบดี 17 ก.ย. · 09:00</div>
+              <div data-en="Inspection of indoor wiring" style="font-size:14px;color:#6b7472;margin-top:4px">ตรวจสอบสายไฟฟ้าภายในอาคาร</div>
+              <div style="height:1px;background:#e6e8e5;margin:16px 0"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:40px;height:40px;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">ว</div>
+                <div style="display:flex;flex-direction:column;flex:1">
+                  <span style="font-size:15px;font-weight:500;color:#14181a">ช่างวิชัย มั่นคง</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">EI-2025-0317</span>
+                </div>
+                <span data-en="Assigned" style="font-size:12px;padding:5px 10px;border-radius:14px;background:#f2f4f1;color:#6b7472">มอบหมายแล้ว</span>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button onclick="App.nav('track')" data-en="Track technician" style="flex:1;padding:13px;border:0;border-radius:14px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">ติดตามช่าง</button>
+                <button data-en="Reschedule" style="padding:13px 16px;border:1px solid #d4d8d2;border-radius:14px;background:#fff;color:#14181a;font-family:inherit;font-size:14px;cursor:pointer">เลื่อนนัด</button>
+              </div>
+            </div>
+            <button onclick="App.nav('book')" data-en="+  Book an inspection" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:17px;border:1px dashed #a9b3ae;border-radius:18px;background:transparent;color:#0d8a7f;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">+  จองคิวตรวจสอบสายไฟฟ้า</button>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span data-en="Recent" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#6b7472">ล่าสุด</span>
+              <div style="background:#fff;border:1px solid #e6e8e5;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+                <span style="width:6px;height:36px;border-radius:3px;background:#0d8a7f"></span>
+                <div style="flex:1;display:flex;flex-direction:column">
+                  <span style="font-size:14px;font-weight:500;color:#14181a">12 มี.ค. 2569 · ผลตรวจ: ปกติ</span>
+                  <span data-en="Meter room + main breaker" style="font-size:12px;color:#6b7472">ห้องมิเตอร์ + เมนเบรกเกอร์</span>
+                </div>
+                <span style="font-size:18px;color:#a9b3ae">›</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e8e5;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+                <span style="width:6px;height:36px;border-radius:3px;background:#c98a17"></span>
+                <div style="flex:1;display:flex;flex-direction:column">
+                  <span style="font-size:14px;font-weight:500;color:#14181a">03 ต.ค. 2568 · ควรแก้ไข</span>
+                  <span data-en="Loose terminal, 2 points" style="font-size:12px;color:#6b7472">จุดต่อหลวม 2 จุด</span>
+                </div>
+                <span style="font-size:18px;color:#a9b3ae">›</span>
+              </div>
+            </div>
+            <div style="background:#e8f2f0;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+              <img src="./syneye-logo.png" alt="" style="width:36px;height:36px;object-fit:contain">
+              <div style="flex:1;display:flex;flex-direction:column">
+                <span data-en="Install SynEye on your home screen" style="font-size:13px;font-weight:600;color:#14181a">ติดตั้ง SynEye บนหน้าจอหลัก</span>
+                <span data-en="Works offline, no app store needed" style="font-size:11px;color:#4e6a66">ใช้งานออฟไลน์ได้ ไม่ต้องลงสโตร์</span>
+              </div>
+              <button onclick="App.install()" data-en="Install" style="padding:8px 14px;border:0;border-radius:12px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">ติดตั้ง</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px 16px calc(26px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5">
+            <div onclick="App.nav('home')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#0d8a7f"><span style="width:20px;height:20px;border-radius:7px;background:#0d8a7f"></span><span data-en="Home" style="font-size:11px;font-weight:600">หน้าแรก</span></div>
+            <div onclick="App.nav('book')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Book" style="font-size:11px">จองคิว</span></div>
+            <div onclick="App.nav('track')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #9aa3a0"></span><span data-en="Track" style="font-size:11px">ติดตาม</span></div>
+            <div onclick="App.nav('history')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="History" style="font-size:11px">ประวัติ</span></div>
+          </div>
+        </div>
+
+<div class="screen" data-screen="book" data-screen-label="A-ลูกค้า-เลือกวันเวลา" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="padding:10px 22px 14px;display:flex;align-items:center;gap:14px">
+            <span onclick="App.back()" style="font-size:26px;color:#14181a;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <div style="display:flex;flex-direction:column">
+              <span data-en="Book inspection" style="font-size:19px;font-weight:600;color:#14181a">นัดหมายตรวจสอบสายไฟฟ้า</span>
+              <span data-en="Pick a date and time that suits you" style="font-size:12px;color:#6b7472">เลือกวันและเวลาที่คุณสะดวก</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;padding:0 22px 14px">
+            <span style="flex:1;height:4px;border-radius:2px;background:#0d8a7f"></span>
+            <span style="flex:1;height:4px;border-radius:2px;background:#dfe3de"></span>
+            <span style="flex:1;height:4px;border-radius:2px;background:#dfe3de"></span>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:0 22px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <span style="font-size:20px;color:#a9b3ae">‹</span>
+                <span style="font-size:16px;font-weight:600;color:#14181a">กันยายน 2569</span>
+                <span style="font-size:20px;color:#14181a">›</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:11px;color:#9aa3a0;margin-bottom:8px">
+                <span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:14px;color:#14181a">
+                <span style="padding:7px 0;color:#c9cdc8">31</span><span style="padding:7px 0;color:#c9cdc8">1</span><span style="padding:7px 0">2</span><span style="padding:7px 0">3</span><span style="padding:7px 0">4</span><span style="padding:7px 0">5</span><span style="padding:7px 0;color:#c9cdc8">6</span>
+                <span style="padding:7px 0;color:#c9cdc8">7</span><span style="padding:7px 0">8</span><span style="padding:7px 0">9</span><span style="padding:7px 0">10</span><span style="padding:7px 0">11</span><span style="padding:7px 0">12</span><span style="padding:7px 0;color:#c9cdc8">13</span>
+                <span style="padding:7px 0;color:#c9cdc8">14</span><span style="padding:7px 0">15</span><span style="padding:7px 0;background:#f2f4f1;border-radius:10px">16</span><span style="padding:7px 0;background:#0d8a7f;color:#fff;border-radius:10px;font-weight:600">17</span><span style="padding:7px 0">18</span><span style="padding:7px 0">19</span><span style="padding:7px 0;color:#c9cdc8">20</span>
+                <span style="padding:7px 0;color:#c9cdc8">21</span><span style="padding:7px 0">22</span><span style="padding:7px 0">23</span><span style="padding:7px 0">24</span><span style="padding:7px 0">25</span><span style="padding:7px 0">26</span><span style="padding:7px 0;color:#c9cdc8">27</span>
+                <span style="padding:7px 0;color:#c9cdc8">28</span><span style="padding:7px 0">29</span><span style="padding:7px 0">30</span><span style="padding:7px 0;color:#c9cdc8">1</span><span style="padding:7px 0;color:#c9cdc8">2</span><span style="padding:7px 0;color:#c9cdc8">3</span><span style="padding:7px 0;color:#c9cdc8">4</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span data-en="Available slots · 17 Sep" style="font-size:13px;font-weight:600;color:#14181a">ช่วงเวลาที่ว่าง · วันที่ 17 ก.ย.</span>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                <div style="padding:15px 0;text-align:center;border-radius:14px;background:#0d8a7f;color:#fff;font-size:16px;font-weight:600">09:00</div>
+                <div style="padding:15px 0;text-align:center;border-radius:14px;background:#fff;border:1px solid #e6e8e5;color:#14181a;font-size:16px">13:00</div>
+                <div style="padding:15px 0;text-align:center;border-radius:14px;background:#fff;border:1px solid #e6e8e5;color:#14181a;font-size:16px">15:30</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px">
+              <span data-en="Inspection address" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:#6b7472">ที่อยู่ตรวจสอบ</span>
+              <div style="font-size:14px;color:#14181a;margin-top:6px;line-height:1.5">ถ.ลาดกระบัง แขวงลาดกระบัง<br>เขตลาดกระบัง กทม. 10520</div>
+              <span data-en="Change address" style="display:inline-block;margin-top:10px;font-size:13px;color:#0d8a7f;font-weight:600">เปลี่ยนที่อยู่</span>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5">
+            <button onclick="App.nav('confirm')" data-en="Confirm appointment" style="width:100%;padding:17px;border:0;border-radius:16px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">ยืนยันวันนัดหมาย</button>
+          </div>
+        </div>
+
+<div class="screen" data-screen="confirm" data-screen-label="A-ลูกค้า-ยืนยันนัดหมาย" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="flex:1;min-height:0;overflow:hidden;padding:18px 22px 0;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0 4px">
+              <span style="width:76px;height:76px;border-radius:50%;background:#0d8a7f;display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;animation:pulse 2.4s infinite">✓</span>
+              <span data-en="Appointment confirmed" style="font-size:22px;font-weight:600;color:#14181a">ยืนยันนัดหมายแล้ว</span>
+              <span data-en="A confirmation was sent to your phone" style="font-size:13px;color:#6b7472;text-align:center;max-width:250px">ระบบส่งข้อความยืนยันไปที่เบอร์ของคุณแล้ว</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;overflow:hidden">
+              <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span data-en="Job no." style="font-size:13px;color:#6b7472">เลขที่งาน</span><span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:#14181a">EI-2025-0317</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span data-en="Date · time" style="font-size:13px;color:#6b7472">วัน · เวลา</span><span style="font-size:14px;font-weight:500;color:#14181a">พฤ 17 ก.ย. 69 · 09:00</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span data-en="Service" style="font-size:13px;color:#6b7472">งานบริการ</span><span data-en="Indoor wiring inspection" style="font-size:14px;font-weight:500;color:#14181a">ตรวจสอบสายไฟฟ้าภายใน</span></div>
+                <div style="display:flex;justify-content:space-between;gap:20px"><span data-en="Address" style="font-size:13px;color:#6b7472;flex-shrink:0">ที่อยู่</span><span style="font-size:14px;font-weight:500;color:#14181a;text-align:right;line-height:1.5">ถ.ลาดกระบัง แขวงลาดกระบัง เขตลาดกระบัง กทม.</span></div>
+              </div>
+              <div style="background:#f6f7f5;border-top:1px solid #e6e8e5;padding:14px 18px;display:flex;align-items:center;gap:10px">
+                <span style="width:8px;height:8px;border-radius:50%;background:#c98a17"></span>
+                <span data-en="Technician assigned 1 day before, you will be notified" style="font-size:12px;color:#6b7472">ระบบจะมอบหมายช่างล่วงหน้า 1 วัน และแจ้งเตือนให้คุณทราบ</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span data-en="What happens next" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#6b7472">ขั้นตอนต่อไป</span>
+              <div style="display:flex;gap:14px;align-items:flex-start"><span style="width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">1</span><span data-en="Reminder the evening before" style="font-size:14px;color:#14181a;padding-top:3px">แจ้งเตือนล่วงหน้าเย็นวันก่อนนัด</span></div>
+              <div style="display:flex;gap:14px;align-items:flex-start"><span style="width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">2</span><span data-en="Notification when the technician departs" style="font-size:14px;color:#14181a;padding-top:3px">แจ้งเมื่อช่างออกเดินทาง</span></div>
+              <div style="display:flex;gap:14px;align-items:flex-start"><span style="width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">3</span><span data-en="Live route tracking on the map" style="font-size:14px;color:#14181a;padding-top:3px">ติดตามเส้นทางแบบเรียลไทม์บนแผนที่</span></div>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">
+            <button onclick="App.nav('home')" data-en="Add to calendar" style="width:100%;padding:16px;border:0;border-radius:16px;background:#14181a;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">เพิ่มในปฏิทิน</button>
+            <button onclick="App.nav('home')" data-en="Back to home" style="width:100%;padding:16px;border:1px solid #d4d8d2;border-radius:16px;background:transparent;color:#14181a;font-family:inherit;font-size:15px;cursor:pointer">กลับหน้าแรก</button>
+          </div>
+        </div>
+
+<div class="screen" data-screen="track" data-screen-label="A-ลูกค้า-ติดตามช่าง" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;position:relative;padding-top:env(safe-area-inset-top)">
+          <div id="ref-mapCust" style="position:absolute;inset:0"></div>
+          <div style="position:relative;z-index:500;margin:calc(8px + env(safe-area-inset-top)) 16px 0;background:#fff;border-radius:18px;border:1px solid #e6e8e5;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 18px rgba(20,24,26,.08)">
+            <span onclick="App.back()" style="font-size:26px;color:#14181a;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <div style="flex:1;display:flex;flex-direction:column">
+              <span data-en="Technician en route" style="font-size:15px;font-weight:600;color:#14181a">ช่างกำลังเดินทาง</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">EI-2025-0317</span>
+            </div>
+            <span style="display:flex;align-items:center;gap:6px;background:#fdeceb;color:#b3261e;padding:5px 10px;border-radius:12px;font-size:11px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#b3261e;animation:pulse 1.6s infinite"></span>LIVE</span>
+          </div>
+          <div style="flex:1;pointer-events:none"></div>
+          <div style="position:relative;z-index:500;background:#fff;border-radius:28px 28px 0 0;border-top:1px solid #e6e8e5;padding:20px 22px calc(26px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px;box-shadow:0 -10px 30px rgba(20,24,26,.10)">
+            <span style="width:44px;height:4px;border-radius:2px;background:#dfe3de;align-self:center"></span>
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="width:52px;height:52px;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:600">ว</div>
+              <div style="flex:1;display:flex;flex-direction:column">
+                <span style="font-size:17px;font-weight:600;color:#14181a">ช่างวิชัย มั่นคง</span>
+                <span data-en="MEA · certified inspector" style="font-size:12px;color:#6b7472">กฟน. · ผู้ตรวจสอบรับรอง</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end">
+                <span id="ref-etaNum" style="font-size:26px;font-weight:600;color:#0d8a7f;line-height:1">12</span>
+                <span data-en="min away" style="font-size:11px;color:#6b7472">นาทีถึง</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:10px;height:10px;border-radius:50%;background:#0d8a7f"></span>
+              <span id="ref-distText" data-en="2.1 km away · on Lat Krabang Rd." style="flex:1;font-size:13px;color:#6b7472">ห่าง 2.1 กม. · อยู่บนถนนลาดกระบัง</span>
+            </div>
+            <div style="height:1px;background:#e6e8e5"></div>
+            <div style="display:flex;gap:10px">
+              <button data-en="Call technician" style="flex:1;padding:16px;border:0;border-radius:16px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">โทรหาช่าง</button>
+              <button onclick="App.nav('chat')" data-en="Chat" style="flex:1;padding:16px;border:1px solid #d4d8d2;border-radius:16px;background:#fff;color:#14181a;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">แชท</button>
+            </div>
+          </div>
+        </div>
+
+<div class="screen" data-screen="chat" data-screen-label="A-ลูกค้า-แชท" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="padding:10px 18px 14px;display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid #e6e8e5">
+            <span onclick="App.back()" style="font-size:26px;color:#14181a;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <div style="width:38px;height:38px;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">ว</div>
+            <div style="flex:1;display:flex;flex-direction:column">
+              <span style="font-size:15px;font-weight:600;color:#14181a">ช่างวิชัย มั่นคง</span>
+              <span data-en="Online · en route" style="font-size:11px;color:#0d8a7f">ออนไลน์ · กำลังเดินทาง</span>
+            </div>
+            <span style="width:36px;height:36px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">☎</span>
+          </div>
+          <div style="flex:1;padding:18px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+            <span style="align-self:center;font-size:11px;color:#9aa3a0">วันนี้ 08:42</span>
+            <div style="align-self:flex-start;max-width:78%;background:#fff;border:1px solid #e6e8e5;border-radius:18px 18px 18px 6px;padding:12px 14px">
+              <span data-en="Good morning, I am on my way for your 09:00 inspection." style="font-size:14px;color:#14181a;line-height:1.55">สวัสดีครับ ผมกำลังเดินทางไปตรวจสอบตามนัด 09:00 นะครับ</span>
+              <div style="font-size:10px;color:#9aa3a0;margin-top:6px">08:42</div>
+            </div>
+            <div style="align-self:flex-end;max-width:78%;background:#0d8a7f;border-radius:18px 18px 6px 18px;padding:12px 14px">
+              <span data-en="Noted. The gate code is 1502#." style="font-size:14px;color:#fff;line-height:1.55">รับทราบครับ รหัสประตูรั้ว 1502# ครับ</span>
+              <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:6px">08:43 · อ่านแล้ว</div>
+            </div>
+            <div style="align-self:flex-start;max-width:78%;background:#fff;border:1px solid #e6e8e5;border-radius:18px 18px 18px 6px;padding:12px 14px">
+              <span data-en="Thank you. Please switch off the main breaker area lights before I arrive." style="font-size:14px;color:#14181a;line-height:1.55">ขอบคุณครับ รบกวนเปิดทางเข้าห้องมิเตอร์ไว้ด้วยครับ</span>
+              <div style="font-size:10px;color:#9aa3a0;margin-top:6px">08:44</div>
+            </div>
+            <div style="align-self:flex-start;display:flex;gap:5px;padding:12px 14px;background:#fff;border:1px solid #e6e8e5;border-radius:18px">
+              <span style="width:6px;height:6px;border-radius:50%;background:#a9b3ae"></span><span style="width:6px;height:6px;border-radius:50%;background:#c9cdc8"></span><span style="width:6px;height:6px;border-radius:50%;background:#dfe3de"></span>
+            </div>
+          </div>
+          <div style="padding:12px 18px 8px;display:flex;gap:8px;flex-wrap:wrap">
+            <span data-en="I'm home" style="font-size:12px;padding:8px 13px;border-radius:16px;background:#fff;border:1px solid #d4d8d2;color:#14181a">อยู่บ้านแล้วครับ</span>
+            <span data-en="Please wait 10 min" style="font-size:12px;padding:8px 13px;border-radius:16px;background:#fff;border:1px solid #d4d8d2;color:#14181a">รอสัก 10 นาที</span>
+          </div>
+          <div style="padding:8px 18px 30px;display:flex;align-items:center;gap:10px">
+            <div data-en="Type a message" style="flex:1;padding:15px 18px;border-radius:24px;background:#fff;border:1px solid #e6e8e5;font-size:14px;color:#9aa3a0">พิมพ์ข้อความ…</div>
+            <span style="width:48px;height:48px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px">↑</span>
+          </div>
+        </div>
+
+<div class="screen" data-screen="history" data-screen-label="A-ลูกค้า-ประวัติและผลตรวจ" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="padding:10px 22px 14px"><span data-en="History &amp; results" style="font-size:22px;font-weight:600;color:#14181a">ประวัติและผลตรวจสอบ</span></div>
+          <div style="display:flex;gap:8px;padding:0 22px 16px">
+            <span data-en="All" style="font-size:13px;padding:8px 14px;border-radius:16px;background:#14181a;color:#fff">ทั้งหมด</span>
+            <span data-en="Normal" style="font-size:13px;padding:8px 14px;border-radius:16px;background:#fff;border:1px solid #d4d8d2;color:#14181a">ปกติ</span>
+            <span data-en="Needs fixing" style="font-size:13px;padding:8px 14px;border-radius:16px;background:#fff;border:1px solid #d4d8d2;color:#14181a">ควรแก้ไข</span>
+          </div>
+          <div style="flex:1;padding:0 22px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:18px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <span style="font-size:16px;font-weight:600;color:#14181a">12 มี.ค. 2569</span>
+                <span data-en="Normal" style="font-size:12px;font-weight:600;padding:5px 11px;border-radius:14px;background:#e8f2f0;color:#0a6c63">ปกติ</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between"><span data-en="Meter &amp; main breaker" style="font-size:13px;color:#6b7472">มิเตอร์และเมนเบรกเกอร์</span><span data-en="Pass" style="font-size:13px;font-weight:500;color:#14181a">ผ่าน</span></div>
+                <div style="display:flex;justify-content:space-between"><span data-en="Insulation resistance" style="font-size:13px;color:#6b7472">ค่าความต้านทานฉนวน</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:#14181a">48 MΩ</span></div>
+                <div style="display:flex;justify-content:space-between"><span data-en="Ground resistance" style="font-size:13px;color:#6b7472">ค่าความต้านทานดิน</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:#14181a">3.8 Ω</span></div>
+                <div style="display:flex;justify-content:space-between"><span data-en="Inspector" style="font-size:13px;color:#6b7472">ผู้ตรวจสอบ</span><span style="font-size:13px;font-weight:500;color:#14181a">ช่างวิชัย มั่นคง</span></div>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button data-en="View report" style="flex:1;padding:12px;border:1px solid #0d8a7f;border-radius:13px;background:#fff;color:#0d8a7f;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">ดูรายงาน</button>
+                <button data-en="Download PDF" style="flex:1;padding:12px;border:1px solid #d4d8d2;border-radius:13px;background:#fff;color:#14181a;font-family:inherit;font-size:13px;cursor:pointer">ดาวน์โหลด PDF</button>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:18px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <span style="font-size:16px;font-weight:600;color:#14181a">03 ต.ค. 2568</span>
+                <span data-en="Needs fixing" style="font-size:12px;font-weight:600;padding:5px 11px;border-radius:14px;background:#fbf0dc;color:#8a5f0c">ควรแก้ไข</span>
+              </div>
+              <div data-en="Loose terminals at 2 points in the distribution board. Retightened and retested." style="font-size:13px;color:#6b7472;line-height:1.6">พบจุดต่อสายหลวม 2 จุดในตู้เมนไฟฟ้า ช่างขันแน่นและทดสอบซ้ำเรียบร้อย</div>
+              <div style="display:flex;gap:8px;margin-top:14px">
+                <div style="flex:1;height:64px;border-radius:12px;background:repeating-linear-gradient(135deg,#eef0ec 0 8px,#e4e7e2 8px 16px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6b7472">photo 1</div>
+                <div style="flex:1;height:64px;border-radius:12px;background:repeating-linear-gradient(135deg,#eef0ec 0 8px,#e4e7e2 8px 16px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6b7472">photo 2</div>
+                <div style="flex:1;height:64px;border-radius:12px;background:repeating-linear-gradient(135deg,#eef0ec 0 8px,#e4e7e2 8px 16px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6b7472">photo 3</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:18px;display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;flex-direction:column"><span style="font-size:16px;font-weight:600;color:#14181a">21 ม.ค. 2567</span><span data-en="Normal · no findings" style="font-size:13px;color:#6b7472">ปกติ · ไม่พบข้อบกพร่อง</span></div>
+              <span style="font-size:18px;color:#a9b3ae">›</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px 16px calc(26px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5">
+            <div onclick="App.nav('home')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Home" style="font-size:11px">หน้าแรก</span></div>
+            <div onclick="App.nav('book')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Book" style="font-size:11px">จองคิว</span></div>
+            <div onclick="App.nav('track')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #9aa3a0"></span><span data-en="Track" style="font-size:11px">ติดตาม</span></div>
+            <div onclick="App.nav('history')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#0d8a7f"><span style="width:20px;height:20px;border-radius:7px;background:#0d8a7f"></span><span data-en="History" style="font-size:11px;font-weight:600">ประวัติ</span></div>
+          </div>
+        </div>
+
+<div class="screen" data-screen="notif" data-screen-label="A-ลูกค้า-แจ้งเตือน" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="padding:10px 22px 16px;display:flex;justify-content:space-between;align-items:baseline">
+            <span data-en="Notifications" style="font-size:22px;font-weight:600;color:#14181a">แจ้งเตือน</span>
+            <span data-en="Mark all read" style="font-size:13px;color:#0d8a7f;font-weight:600">อ่านทั้งหมด</span>
+          </div>
+          <div style="flex:1;padding:0 22px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;gap:13px">
+              <span style="width:10px;height:10px;border-radius:50%;background:#0d8a7f;margin-top:5px;flex-shrink:0"></span>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span data-en="Technician departed" style="font-size:15px;font-weight:600;color:#14181a">ช่างออกเดินทางแล้ว</span>
+                <span data-en="Wichai is on the way, about 12 minutes away." style="font-size:13px;color:#6b7472;line-height:1.55">ช่างวิชัยกำลังเดินทาง ประมาณ 12 นาทีถึงบ้านคุณ</span>
+                <span style="font-size:11px;color:#9aa3a0;margin-top:2px">08:48 · วันนี้</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;gap:13px">
+              <span style="width:10px;height:10px;border-radius:50%;background:#c98a17;margin-top:5px;flex-shrink:0"></span>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span data-en="Reminder: inspection tomorrow 09:00" style="font-size:15px;font-weight:600;color:#14181a">เตือนความจำ: นัดตรวจสอบพรุ่งนี้ 09:00</span>
+                <span data-en="Please make sure someone can open the meter room." style="font-size:13px;color:#6b7472;line-height:1.55">รบกวนจัดเตรียมทางเข้าห้องมิเตอร์ไว้ด้วย</span>
+                <span style="font-size:11px;color:#9aa3a0;margin-top:2px">เมื่อวาน 18:00</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;gap:13px;opacity:.72">
+              <span style="width:10px;height:10px;border-radius:50%;background:#dfe3de;margin-top:5px;flex-shrink:0"></span>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span data-en="Appointment confirmed" style="font-size:15px;font-weight:600;color:#14181a">ยืนยันนัดหมายเรียบร้อย</span>
+                <span data-en="Job EI-2025-0317 · Thu 17 Sep 09:00" style="font-size:13px;color:#6b7472;line-height:1.55">เลขที่งาน EI-2025-0317 · พฤ 17 ก.ย. 09:00</span>
+                <span style="font-size:11px;color:#9aa3a0;margin-top:2px">14 ก.ย. 10:21</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;gap:13px;opacity:.72">
+              <span style="width:10px;height:10px;border-radius:50%;background:#dfe3de;margin-top:5px;flex-shrink:0"></span>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span data-en="Inspection report available" style="font-size:15px;font-weight:600;color:#14181a">รายงานผลตรวจสอบพร้อมให้ดาวน์โหลด</span>
+                <span data-en="Result: normal, inspected 12 Mar 2026" style="font-size:13px;color:#6b7472;line-height:1.55">ผลตรวจ: ปกติ · ตรวจเมื่อ 12 มี.ค. 2569</span>
+                <span style="font-size:11px;color:#9aa3a0;margin-top:2px">12 มี.ค. 16:05</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px 16px calc(26px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5">
+            <div onclick="App.nav('home')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Home" style="font-size:11px">หน้าแรก</span></div>
+            <div onclick="App.nav('book')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Book" style="font-size:11px">จองคิว</span></div>
+            <div onclick="App.nav('track')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #9aa3a0"></span><span data-en="Track" style="font-size:11px">ติดตาม</span></div>
+            <div onclick="App.nav('history')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="History" style="font-size:11px">ประวัติ</span></div>
+          </div>
+        </div>
+
+<div class="screen" data-screen="profile" data-screen-label="A-ลูกค้า-โปรไฟล์" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="flex:1;padding:10px 22px 0;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:16px;padding:6px 0 4px">
+              <div style="width:64px;height:64px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600">ส</div>
+              <div style="display:flex;flex-direction:column">
+                <span style="font-size:20px;font-weight:600;color:#14181a">สิทธิพงษ์ หาญนอก</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6b7472">CA 0-1234-5678-9 · 08x-xxx-4417</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;overflow:hidden">
+              <div style="padding:16px 18px;border-bottom:1px solid #f0f2ef">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <span data-en="Primary address" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:#6b7472">ที่อยู่หลัก</span>
+                  <span data-en="Edit" style="font-size:13px;color:#0d8a7f;font-weight:600">แก้ไข</span>
+                </div>
+                <div style="font-size:14px;color:#14181a;line-height:1.55">88/12 ถ.ลาดกระบัง แขวงลาดกระบัง<br>เขตลาดกระบัง กทม. 10520</div>
+                <div style="margin-top:12px;height:84px;border-radius:14px;overflow:hidden;background:#eef0ec" id="ref-mapHome"></div>
+              </div>
+              <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;flex-direction:column"><span data-en="Add another address" style="font-size:14px;font-weight:500;color:#14181a">เพิ่มที่อยู่อื่น</span><span data-en="Shop, second home, condo" style="font-size:12px;color:#6b7472">ร้านค้า บ้านหลังที่สอง คอนโด</span></div>
+                <span style="font-size:22px;color:#0d8a7f">+</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;overflow:hidden">
+              <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f2ef">
+                <span data-en="Language" style="font-size:14px;color:#14181a">ภาษา</span>
+                <span style="display:flex;gap:4px;background:#f2f4f1;border-radius:14px;padding:3px"><span style="font-size:12px;font-weight:600;padding:6px 12px;border-radius:11px;background:#fff;color:#14181a">ไทย</span><span style="font-size:12px;padding:6px 12px;color:#6b7472">EN</span></span>
+              </div>
+              <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f2ef">
+                <span data-en="Push notifications" style="font-size:14px;color:#14181a">การแจ้งเตือน</span>
+                <span style="width:46px;height:28px;border-radius:14px;background:#0d8a7f;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><span style="width:22px;height:22px;border-radius:50%;background:#fff"></span></span>
+              </div>
+              <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f2ef">
+                <span data-en="Share location while tracking" style="font-size:14px;color:#14181a">แชร์ตำแหน่งขณะติดตามช่าง</span>
+                <span style="width:46px;height:28px;border-radius:14px;background:#0d8a7f;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><span style="width:22px;height:22px;border-radius:50%;background:#fff"></span></span>
+              </div>
+              <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
+                <span data-en="Help &amp; contact MEA" style="font-size:14px;color:#14181a">ความช่วยเหลือ · ติดต่อ กฟน.</span>
+                <span style="font-size:18px;color:#a9b3ae">›</span>
+              </div>
+            </div>
+            <span data-en="SynEye PWA · v1.0 · offline ready" style="align-self:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9aa3a0">SynEye PWA · v1.0 · ใช้งานออฟไลน์ได้</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px 16px calc(26px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5">
+            <div onclick="App.nav('home')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Home" style="font-size:11px">หน้าแรก</span></div>
+            <div onclick="App.nav('book')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Book" style="font-size:11px">จองคิว</span></div>
+            <div onclick="App.nav('track')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #9aa3a0"></span><span data-en="Track" style="font-size:11px">ติดตาม</span></div>
+            <div onclick="App.nav('profile')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#0d8a7f"><span style="width:20px;height:20px;border-radius:7px;background:#0d8a7f"></span><span data-en="Profile" style="font-size:11px;font-weight:600">โปรไฟล์</span></div>
+          </div>
+        </div>
+
+<div class="screen" data-screen="queue" data-screen-label="A-ช่าง-คิวงานวันนี้" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="background:#14181a;padding:10px 22px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;flex-direction:column">
+                <span onclick="App.nav('launcher')" data-en="‹ Switch app" style="font-size:12px;color:#9aa3a0;cursor:pointer;align-self:flex-start;padding:2px 0 6px">‹ สลับแอป</span>
+                <span data-en="Today · Wed 16 Sep" style="font-size:12px;color:#9aa3a0">วันนี้ · พุธ 16 ก.ย. 69</span>
+                <span data-en="Today's queue" style="font-size:21px;font-weight:600;color:#fff">คิวงานวันนี้</span>
+              </div>
+              <span style="display:flex;align-items:center;gap:7px;background:#1e262b;padding:8px 12px;border-radius:16px;font-size:12px;color:#7fd8cd"><span style="width:7px;height:7px;border-radius:50%;background:#2fbfae"></span><span data-en="On duty">พร้อมรับงาน</span></span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;background:#1e262b;border-radius:16px;padding:13px 14px"><div style="font-size:24px;font-weight:600;color:#fff;line-height:1.1">5</div><div data-en="jobs" style="font-size:11px;color:#9aa3a0">งานทั้งหมด</div></div>
+              <div style="flex:1;background:#1e262b;border-radius:16px;padding:13px 14px"><div style="font-size:24px;font-weight:600;color:#7fd8cd;line-height:1.1">2</div><div data-en="done" style="font-size:11px;color:#9aa3a0">เสร็จแล้ว</div></div>
+              <div style="flex:1;background:#1e262b;border-radius:16px;padding:13px 14px"><div style="font-size:24px;font-weight:600;color:#f0c369;line-height:1.1">31</div><div data-en="km driven" style="font-size:11px;color:#9aa3a0">กม. ที่วิ่ง</div></div>
+            </div>
+          </div>
+          <div style="flex:1;padding:16px 22px 0;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+            <div style="background:#fff;border:2px solid #0d8a7f;border-radius:20px;padding:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <span data-en="Next job · 09:00" style="font-size:12px;font-weight:600;color:#0d8a7f">งานถัดไป · 09:00</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">EI-2025-0317</span>
+              </div>
+              <div style="font-size:17px;font-weight:600;color:#14181a">สิทธิพงษ์ หาญนอก</div>
+              <div style="font-size:13px;color:#6b7472;margin-top:4px;line-height:1.5">88/12 ถ.ลาดกระบัง แขวงลาดกระบัง เขตลาดกระบัง</div>
+              <div style="display:flex;gap:14px;margin-top:12px">
+                <span data-en="2.1 km" style="font-size:12px;color:#14181a;background:#f2f4f1;padding:6px 11px;border-radius:12px">ห่าง 2.1 กม.</span>
+                <span data-en="Indoor wiring" style="font-size:12px;color:#14181a;background:#f2f4f1;padding:6px 11px;border-radius:12px">ตรวจสายภายใน</span>
+              </div>
+              <button onclick="App.nav('job')" data-en="Start travel" style="width:100%;margin-top:14px;padding:15px;border:0;border-radius:14px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">เริ่มเดินทาง</button>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+              <div style="display:flex;flex-direction:column;align-items:center;width:46px"><span style="font-size:14px;font-weight:600;color:#14181a">11:00</span><span style="font-size:10px;color:#9aa3a0">60 นาที</span></div>
+              <span style="width:1px;height:38px;background:#e6e8e5"></span>
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:500;color:#14181a">ร้านทวีทรัพย์ การช่าง</span><span style="font-size:12px;color:#6b7472">ซ.ลาดกระบัง 12 · ตรวจตู้เมนไฟฟ้า</span></div>
+              <span style="font-size:18px;color:#a9b3ae">›</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+              <div style="display:flex;flex-direction:column;align-items:center;width:46px"><span style="font-size:14px;font-weight:600;color:#14181a">13:30</span><span style="font-size:10px;color:#9aa3a0">45 นาที</span></div>
+              <span style="width:1px;height:38px;background:#e6e8e5"></span>
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:500;color:#14181a">นิตยา ศรีสมบัติ</span><span style="font-size:12px;color:#6b7472">ซ.ฉลองกรุง 1 · ตรวจสายภายใน</span></div>
+              <span style="font-size:18px;color:#a9b3ae">›</span>
+            </div>
+            <div style="background:#f2f4f1;border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center;opacity:.7">
+              <div style="display:flex;flex-direction:column;align-items:center;width:46px"><span style="font-size:14px;font-weight:600;color:#6b7472">07:30</span><span data-en="done" style="font-size:10px;color:#0a6c63">เสร็จ</span></div>
+              <span style="width:1px;height:38px;background:#dfe3de"></span>
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:500;color:#6b7472">อาคารพาณิชย์ 4 ชั้น</span><span style="font-size:12px;color:#9aa3a0">ถ.อ่อนนุช · ผลตรวจ ปกติ</span></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px 16px calc(26px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5">
+            <div onclick="App.nav('queue')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#0d8a7f"><span style="width:20px;height:20px;border-radius:7px;background:#0d8a7f"></span><span data-en="Queue" style="font-size:11px;font-weight:600">คิวงาน</span></div>
+            <div onclick="App.nav('job')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #9aa3a0"></span><span data-en="Map" style="font-size:11px">แผนที่</span></div>
+            <div onclick="App.nav('form')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Reports" style="font-size:11px">ผลตรวจ</span></div>
+            <div onclick="App.nav('summary')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:#9aa3a0"><span style="width:20px;height:20px;border-radius:7px;border:2px solid #9aa3a0"></span><span data-en="Summary" style="font-size:11px">สรุปงาน</span></div>
+          </div>
+        </div>
+
+<div class="screen" data-screen="job" data-screen-label="A-ช่าง-รายละเอียดงานและนำทาง" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="background:#14181a;padding:6px 22px 16px;display:flex;align-items:center;gap:12px">
+            <span onclick="App.back()" style="font-size:26px;color:#fff;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <div style="flex:1;display:flex;flex-direction:column"><span data-en="Job detail" style="font-size:16px;font-weight:600;color:#fff">รายละเอียดงาน</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9aa3a0">EI-2025-0317 · 09:00</span></div>
+            <span data-en="En route" style="font-size:11px;font-weight:600;background:#0d8a7f;color:#fff;padding:6px 11px;border-radius:12px">กำลังเดินทาง</span>
+          </div>
+          <div id="ref-mapTech" style="height:258px;background:#eef0ec"></div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding:14px 22px 0;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;flex-direction:column"><span data-en="Distance · ETA" style="font-size:12px;color:#6b7472">ระยะทาง · เวลาถึง</span><span style="font-size:19px;font-weight:600;color:#14181a">2.1 กม. · 12 นาที</span></div>
+              <button onclick="App.nav('job')" data-en="Open navigation" style="padding:13px 18px;border:0;border-radius:14px;background:#14181a;color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">เปิดนำทาง</button>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:42px;height:42px;border-radius:50%;background:#e8f2f0;color:#0d8a7f;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">ส</div>
+                <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;color:#14181a">สิทธิพงษ์ หาญนอก</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">08x-xxx-4417 · CA 0-1234-5678-9</span></div>
+                <span style="width:40px;height:40px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">☎</span>
+              </div>
+              <div style="height:1px;background:#f0f2ef"></div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span data-en="Address" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:#6b7472">ที่อยู่</span>
+                <span style="font-size:14px;color:#14181a;line-height:1.55">88/12 ถ.ลาดกระบัง แขวงลาดกระบัง เขตลาดกระบัง กทม. 10520</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span data-en="Customer note" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:#6b7472">หมายเหตุจากลูกค้า</span>
+                <span style="font-size:14px;color:#14181a;line-height:1.55">รหัสประตูรั้ว 1502# · ห้องมิเตอร์อยู่ข้างโรงรถ</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span data-en="Checklist: 12 items" style="font-size:12px;background:#fff;border:1px solid #e6e8e5;padding:9px 13px;border-radius:14px;color:#14181a">เช็กลิสต์ 12 รายการ</span>
+              <span data-en="Last inspected 12 Mar 2026" style="font-size:12px;background:#fff;border:1px solid #e6e8e5;padding:9px 13px;border-radius:14px;color:#14181a">ตรวจครั้งก่อน 12 มี.ค. 69</span>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5;display:flex;gap:10px">
+            <button onclick="App.nav('trip')" data-en="Arrived" style="flex:1;padding:17px;border:0;border-radius:16px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">ถึงที่หมายแล้ว</button>
+            <button data-en="Issue" style="padding:17px 18px;border:1px solid #d4d8d2;border-radius:16px;background:#fff;color:#b3261e;font-family:inherit;font-size:15px;cursor:pointer">แจ้งปัญหา</button>
+          </div>
+        </div>
+
+<div class="screen" data-screen="trip" data-screen-label="A-ช่าง-สถานะเดินทาง" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="background:#14181a;padding:6px 22px 16px;display:flex;align-items:center;gap:12px">
+            <span onclick="App.back()" style="font-size:26px;color:#fff;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <span data-en="Job status" style="flex:1;font-size:16px;font-weight:600;color:#fff">สถานะงาน</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9aa3a0">EI-2025-0317</span>
+          </div>
+          <div style="flex:1;padding:20px 22px 0;display:flex;flex-direction:column;gap:18px;overflow:hidden">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center"><span style="width:26px;height:26px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">✓</span><span style="width:2px;flex:1;background:#0d8a7f"></span></div>
+                <div style="display:flex;flex-direction:column;padding-bottom:18px"><span data-en="Accepted" style="font-size:15px;font-weight:600;color:#14181a">รับงาน</span><span style="font-size:12px;color:#6b7472">08:35 · มอบหมายอัตโนมัติตามพื้นที่</span></div>
+              </div>
+              <div style="display:flex;gap:14px;margin-top:-18px">
+                <div style="display:flex;flex-direction:column;align-items:center"><span style="width:26px;height:26px;border-radius:50%;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">✓</span><span style="width:2px;flex:1;background:#0d8a7f"></span></div>
+                <div style="display:flex;flex-direction:column;padding-bottom:18px"><span data-en="Departed" style="font-size:15px;font-weight:600;color:#14181a">ออกเดินทาง</span><span data-en="08:48 · customer notified automatically" style="font-size:12px;color:#6b7472">08:48 · ระบบแจ้งลูกค้าแล้ว</span></div>
+              </div>
+              <div style="display:flex;gap:14px;margin-top:-18px">
+                <div style="display:flex;flex-direction:column;align-items:center"><span style="width:26px;height:26px;border-radius:50%;border:2px solid #0d8a7f;background:#fff;display:flex;align-items:center;justify-content:center;animation:pulse 2s infinite"><span style="width:9px;height:9px;border-radius:50%;background:#0d8a7f"></span></span><span style="width:2px;flex:1;background:#dfe3de"></span></div>
+                <div style="display:flex;flex-direction:column;padding-bottom:18px"><span data-en="Arrived on site" style="font-size:15px;font-weight:600;color:#0d8a7f">ถึงหน้างาน</span><span data-en="Tap the button below when you arrive" style="font-size:12px;color:#6b7472">กดปุ่มด้านล่างเมื่อถึงหน้างาน</span></div>
+              </div>
+              <div style="display:flex;gap:14px;margin-top:-18px">
+                <div style="display:flex;flex-direction:column;align-items:center"><span style="width:26px;height:26px;border-radius:50%;border:2px solid #dfe3de;background:#fff"></span><span style="width:2px;flex:1;background:#dfe3de"></span></div>
+                <div style="display:flex;flex-direction:column;padding-bottom:18px"><span data-en="Inspection" style="font-size:15px;font-weight:500;color:#9aa3a0">ตรวจสอบและบันทึกผล</span></div>
+              </div>
+              <div style="display:flex;gap:14px;margin-top:-18px">
+                <div style="display:flex;flex-direction:column;align-items:center"><span style="width:26px;height:26px;border-radius:50%;border:2px solid #dfe3de;background:#fff"></span></div>
+                <div style="display:flex;flex-direction:column"><span data-en="Customer signature · close job" style="font-size:15px;font-weight:500;color:#9aa3a0">ลูกค้าเซ็นรับงาน · ปิดงาน</span></div>
+              </div>
+            </div>
+            <div style="background:#e8f2f0;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:6px">
+              <span data-en="Travel time so far" style="font-size:12px;color:#4e6a66">เวลาเดินทางสะสม</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:500;color:#0a6c63;line-height:1">00:09:12</span>
+              <span data-en="Location shared with the customer live" style="font-size:12px;color:#4e6a66">แชร์ตำแหน่งให้ลูกค้าแบบเรียลไทม์</span>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">
+            <button onclick="App.nav('form')" data-en="I have arrived" style="width:100%;padding:18px;border:0;border-radius:16px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer">ถึงแล้ว · เริ่มตรวจสอบ</button>
+            <button data-en="Pause / delay" style="width:100%;padding:15px;border:1px solid #d4d8d2;border-radius:16px;background:#fff;color:#14181a;font-family:inherit;font-size:14px;cursor:pointer">แจ้งล่าช้า</button>
+          </div>
+        </div>
+
+<div class="screen" data-screen="form" data-screen-label="A-ช่าง-ฟอร์มผลตรวจ" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="background:#14181a;padding:6px 22px 16px;display:flex;align-items:center;gap:12px">
+            <span onclick="App.back()" style="font-size:26px;color:#fff;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <div style="flex:1;display:flex;flex-direction:column"><span data-en="Inspection record" style="font-size:16px;font-weight:600;color:#fff">บันทึกผลตรวจสอบ</span><span data-en="8 of 12 items" style="font-size:11px;color:#9aa3a0">8 จาก 12 รายการ</span></div>
+            <span data-en="Save draft" style="font-size:12px;color:#7fd8cd;font-weight:600">บันทึกร่าง</span>
+          </div>
+          <div style="height:4px;background:#e6e8e5"><div style="width:66%;height:4px;background:#0d8a7f"></div></div>
+          <div style="flex:1;padding:16px 22px 0;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px">
+              <span data-en="1 · Meter and main breaker" style="font-size:14px;font-weight:600;color:#14181a">1 · มิเตอร์และเมนเบรกเกอร์</span>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                <span data-en="Pass" style="padding:12px 0;text-align:center;border-radius:13px;background:#0d8a7f;color:#fff;font-size:14px;font-weight:600">ผ่าน</span>
+                <span data-en="Fix" style="padding:12px 0;text-align:center;border-radius:13px;background:#f6f7f5;border:1px solid #e6e8e5;color:#14181a;font-size:14px">ควรแก้</span>
+                <span data-en="Fail" style="padding:12px 0;text-align:center;border-radius:13px;background:#f6f7f5;border:1px solid #e6e8e5;color:#14181a;font-size:14px">ไม่ผ่าน</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px">
+              <span data-en="2 · Insulation resistance" style="font-size:14px;font-weight:600;color:#14181a">2 · ค่าความต้านทานฉนวน</span>
+              <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #0d8a7f;padding-bottom:8px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;color:#14181a">48.2</span>
+                <span style="font-size:15px;color:#6b7472">MΩ</span>
+                <span data-en="min 1.0 MΩ" style="margin-left:auto;font-size:11px;color:#0a6c63;background:#e8f2f0;padding:5px 9px;border-radius:10px">เกณฑ์ ≥ 1.0 MΩ</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px">
+              <span data-en="3 · Ground resistance" style="font-size:14px;font-weight:600;color:#14181a">3 · ค่าความต้านทานหลักดิน</span>
+              <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #c98a17;padding-bottom:8px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;color:#14181a">6.4</span>
+                <span style="font-size:15px;color:#6b7472">Ω</span>
+                <span data-en="over limit 5 Ω" style="margin-left:auto;font-size:11px;color:#8a5f0c;background:#fbf0dc;padding:5px 9px;border-radius:10px">สูงกว่าเกณฑ์ 5 Ω</span>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px">
+              <span data-en="Technician note" style="font-size:14px;font-weight:600;color:#14181a">บันทึกของช่าง</span>
+              <span data-en="Ground rod corroded, recommend replacement within 30 days." style="font-size:13px;color:#6b7472;line-height:1.6">แท่งหลักดินเกิดสนิม แนะนำเปลี่ยนภายใน 30 วัน และตรวจวัดซ้ำ</span>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e6e8e5;display:flex;gap:10px">
+            <button onclick="App.nav('sign')" data-en="Next item" style="flex:1;padding:17px;border:0;border-radius:16px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">รายการถัดไป</button>
+            <button onclick="App.nav('photo')" data-en="Add photo" style="padding:17px 18px;border:1px solid #d4d8d2;border-radius:16px;background:#fff;color:#14181a;font-family:inherit;font-size:15px;cursor:pointer">+ รูป</button>
+          </div>
+        </div>
+
+<div class="screen" data-screen="photo" data-screen-label="A-ช่าง-ถ่ายรูปประกอบ" style="width:100%;height:100dvh;background:#14181a;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="padding:6px 22px 14px;display:flex;align-items:center;gap:12px">
+            <span onclick="App.back()" style="font-size:26px;color:#fff;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <div style="flex:1;display:flex;flex-direction:column"><span data-en="Photos" style="font-size:16px;font-weight:600;color:#fff">ถ่ายรูปประกอบ</span><span data-en="Item 3 · ground rod" style="font-size:11px;color:#9aa3a0">รายการที่ 3 · หลักดิน</span></div>
+            <span data-en="Done" style="font-size:13px;color:#7fd8cd;font-weight:600">เสร็จ</span>
+          </div>
+          <div style="flex:1;margin:0 14px;border-radius:22px;background:repeating-linear-gradient(135deg,#1e262b 0 10px,#232c32 10px 20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;position:relative">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7f8b89;letter-spacing:.1em">camera viewfinder</span>
+            <span data-en="Frame the ground rod and the connection point" style="font-size:13px;color:#c8cfcd;max-width:220px;text-align:center;line-height:1.6">จัดเฟรมให้เห็นหลักดินและจุดต่อสายชัดเจน</span>
+            <div style="position:absolute;top:16px;left:16px;display:flex;gap:8px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(0,0,0,.5);color:#fff;padding:6px 10px;border-radius:10px">13.7218, 100.7861</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(0,0,0,.5);color:#fff;padding:6px 10px;border-radius:10px">16/09/69 09:24</span>
+            </div>
+          </div>
+          <div style="padding:16px 22px 0;display:flex;gap:10px">
+            <div style="width:62px;height:62px;border-radius:14px;background:repeating-linear-gradient(135deg,#2b353b 0 8px,#333e45 8px 16px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8f9b99">1</div>
+            <div style="width:62px;height:62px;border-radius:14px;background:repeating-linear-gradient(135deg,#2b353b 0 8px,#333e45 8px 16px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8f9b99">2</div>
+            <div style="width:62px;height:62px;border-radius:14px;border:1px dashed #4b565c;display:flex;align-items:center;justify-content:center;color:#7f8b89;font-size:20px">+</div>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:6px"><span data-en="2 of 6 photos" style="font-size:13px;color:#fff">2 จาก 6 รูป</span><span data-en="Auto-stamped with GPS and time" style="font-size:11px;color:#9aa3a0">ประทับพิกัดและเวลาอัตโนมัติ</span></div>
+          </div>
+          <div style="padding:20px 22px calc(34px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between">
+            <span data-en="Gallery" style="font-size:13px;color:#9aa3a0">คลังรูป</span>
+            <span style="width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#0d8a7f"></span>
+            <span data-en="Flash" style="font-size:13px;color:#9aa3a0">แฟลช</span>
+          </div>
+        </div>
+
+<div class="screen" data-screen="sign" data-screen-label="A-ช่าง-ลูกค้าเซ็นรับงาน" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="background:#14181a;padding:6px 22px 16px;display:flex;align-items:center;gap:12px">
+            <span onclick="App.back()" style="font-size:26px;color:#fff;cursor:pointer;padding:4px 10px 4px 0">‹</span>
+            <span data-en="Customer sign-off" style="flex:1;font-size:16px;font-weight:600;color:#fff">ลูกค้าเซ็นรับงาน</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9aa3a0">EI-2025-0317</span>
+          </div>
+          <div style="flex:1;padding:18px 22px 0;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px">
+              <span data-en="Inspection summary" style="font-size:14px;font-weight:600;color:#14181a">สรุปผลการตรวจสอบ</span>
+              <div style="display:flex;justify-content:space-between"><span data-en="Items inspected" style="font-size:13px;color:#6b7472">รายการที่ตรวจ</span><span style="font-size:13px;font-weight:500;color:#14181a">12 รายการ</span></div>
+              <div style="display:flex;justify-content:space-between"><span data-en="Pass" style="font-size:13px;color:#6b7472">ผ่าน</span><span style="font-size:13px;font-weight:500;color:#0a6c63">11 รายการ</span></div>
+              <div style="display:flex;justify-content:space-between"><span data-en="Needs fixing" style="font-size:13px;color:#6b7472">ควรแก้ไข</span><span style="font-size:13px;font-weight:500;color:#8a5f0c">1 รายการ · หลักดิน</span></div>
+              <div style="display:flex;justify-content:space-between"><span data-en="Time on site" style="font-size:13px;color:#6b7472">เวลาหน้างาน</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:#14181a">00:52:40</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span data-en="Sign in the box below" style="font-size:13px;color:#6b7472">ลงลายมือชื่อในกรอบด้านล่าง</span>
+              <div style="background:#fff;border:1px dashed #a9b3ae;border-radius:20px;height:210px;box-sizing:border-box;position:relative;overflow:hidden">
+                <canvas id="ref-sigCanvas" width="700" height="420" style="width:100%;height:100%;touch-action:none;cursor:crosshair"></canvas>
+                <span data-en="Draw here" style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c0c6c2;pointer-events:none">เซ็นที่นี่</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:13px;color:#14181a">สิทธิพงษ์ หาญนอก</span>
+                <button data-en="Clear" onclick="App.clearSig()" style="font-size:13px;color:#0d8a7f;background:transparent;border:0;font-family:inherit;font-weight:600;cursor:pointer">ล้างลายเซ็น</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:15px">
+              <span style="width:22px;height:22px;border-radius:6px;background:#0d8a7f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">✓</span>
+              <span data-en="The customer acknowledges the results and receives a copy of the report by app and email." style="font-size:13px;color:#6b7472;line-height:1.55">ลูกค้ารับทราบผลตรวจสอบ และจะได้รับสำเนารายงานในแอปและอีเมล</span>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom))">
+            <button onclick="App.nav('summary')" data-en="Close job &amp; send report" style="width:100%;padding:18px;border:0;border-radius:16px;background:#0d8a7f;color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">ปิดงานและส่งรายงาน</button>
+          </div>
+        </div>
+
+<div class="screen" data-screen="summary" data-screen-label="A-ช่าง-สรุปงานประจำวัน" style="width:100%;height:100dvh;background:#f6f7f5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)">
+          <div style="background:#14181a;padding:6px 22px 22px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;flex-direction:column"><span onclick="App.nav('queue')" data-en="‹ Back to queue" style="font-size:12px;color:#9aa3a0;cursor:pointer;align-self:flex-start;padding:2px 0 6px">‹ กลับคิวงาน</span><span data-en="Daily summary · Wed 16 Sep" style="font-size:12px;color:#9aa3a0">สรุปงานประจำวัน · พุธ 16 ก.ย. 69</span><span style="font-size:21px;font-weight:600;color:#fff">ช่างวิชัย มั่นคง</span></div>
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;background:#1e262b;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:600;color:#7fd8cd;line-height:1.1">5</div><div data-en="jobs closed" style="font-size:11px;color:#9aa3a0">งานปิดแล้ว</div></div>
+              <div style="flex:1;background:#1e262b;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:600;color:#fff;line-height:1.1">41</div><div data-en="km driven" style="font-size:11px;color:#9aa3a0">กม. ที่วิ่ง</div></div>
+              <div style="flex:1;background:#1e262b;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:600;color:#f0c369;line-height:1.1">2</div><div data-en="follow-ups" style="font-size:11px;color:#9aa3a0">ต้องติดตาม</div></div>
+            </div>
+          </div>
+          <div style="flex:1;padding:16px 22px 0;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span data-en="Jobs today" style="font-size:14px;font-weight:600;color:#14181a">งานวันนี้</span>
+              <span data-en="Export CSV" style="font-size:13px;color:#0d8a7f;font-weight:600">ส่งออก CSV</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px">
+              <span style="width:6px;height:34px;border-radius:3px;background:#0d8a7f"></span>
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500;color:#14181a">สิทธิพงษ์ หาญนอก · 09:00</span><span data-en="Normal · 1 follow-up" style="font-size:12px;color:#6b7472">ปกติ · มีรายการติดตาม 1 จุด</span></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">52 นาที</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px">
+              <span style="width:6px;height:34px;border-radius:3px;background:#0d8a7f"></span>
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500;color:#14181a">ร้านทวีทรัพย์ การช่าง · 11:00</span><span data-en="Normal" style="font-size:12px;color:#6b7472">ปกติ</span></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">38 นาที</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px">
+              <span style="width:6px;height:34px;border-radius:3px;background:#c98a17"></span>
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500;color:#14181a">นิตยา ศรีสมบัติ · 13:30</span><span data-en="Needs fixing · loose terminal" style="font-size:12px;color:#6b7472">ควรแก้ไข · จุดต่อหลวม</span></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7472">45 นาที</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e8e5;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;margin-top:4px">
+              <span data-en="Time distribution" style="font-size:14px;font-weight:600;color:#14181a">สัดส่วนเวลาทำงาน</span>
+              <div style="display:flex;height:14px;border-radius:7px;overflow:hidden">
+                <span style="flex:52;background:#0d8a7f"></span><span style="flex:26;background:#7fd8cd"></span><span style="flex:22;background:#dfe3de"></span>
+              </div>
+              <div style="display:flex;gap:14px;font-size:11px;color:#6b7472;flex-wrap:wrap">
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:#0d8a7f"></span><span data-en="On site 3h 15m">หน้างาน 3 ชม. 15 น.</span></span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:#7fd8cd"></span><span data-en="Travel 1h 38m">เดินทาง 1 ชม. 38 น.</span></span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:#dfe3de"></span><span data-en="Idle 1h 20m">รอคิว 1 ชม. 20 น.</span></span>
+              </div>
+            </div>
+          </div>
+          <div style="padding:14px 22px calc(30px + env(safe-area-inset-bottom))">
+            <button onclick="App.nav('queue')" data-en="Submit daily report" style="width:100%;padding:17px;border:0;border-radius:16px;background:#14181a;color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer">ส่งสรุปงานประจำวัน</button>
+          </div>
+        </div>
+</section>
+<script>
+const App = {
+  state: { screen: 'launcher' },
+  stack: [],
+  maps: {},
+  lang: 'th',
+  installEvt: null,
+  sigCtx: null,
+  sigEl: null,
+  route: [[13.72565,100.76413],[13.72684,100.76412],[13.72742,100.76412],[13.72750,100.76412],[13.72778,100.76439],[13.72779,100.76503],[13.72781,100.76565],[13.72781,100.76610],[13.72782,100.76687],[13.72784,100.76899],[13.72782,100.76910],[13.72787,100.76959],[13.72787,100.77029],[13.72790,100.77108],[13.72793,100.77183],[13.72795,100.77293],[13.72797,100.77395],[13.72803,100.77642],[13.72805,100.77704],[13.72715,100.77809],[13.72605,100.77812],[13.72493,100.77816],[13.72479,100.77822],[13.72473,100.77836],[13.72473,100.77947],[13.72474,100.78003],[13.72471,100.78014],[13.72464,100.78020],[13.72454,100.78016],[13.72357,100.78017],[13.72317,100.78017],[13.72252,100.78021],[13.72197,100.78024],[13.72198,100.78107],[13.72200,100.78195],[13.72201,100.78264],[13.72204,100.78471],[13.72209,100.78507],[13.72267,100.78505],[13.72319,100.78506],[13.72325,100.78622],[13.72327,100.78668],[13.72345,100.78670]],
+  t: 0.38,
+  keys: ['launcher','home','book','confirm','track','chat','history','notif','profile','queue','job','trip','form','photo','sign','summary'],
+
+  el(name){ return document.getElementById('ref-' + name); },
+
+  showScreen(name){
+    document.querySelectorAll('.screen').forEach(s => {
+      s.classList.toggle('active', s.dataset.screen === name);
+    });
+  },
+
+  nav(k){
+    if (k === this.state.screen) return;
+    this.stack.push(this.state.screen);
+    this.state.screen = k;
+    this.showScreen(k);
+    try { localStorage.setItem('syneye.screen', k); } catch(e){}
+    try { history.pushState({syneye:k}, '', '#' + k); } catch(e){}
+    this.sync();
+  },
+  back(){
+    const prev = this.stack.pop() || 'launcher';
+    this.state.screen = prev;
+    this.showScreen(prev);
+    try { localStorage.setItem('syneye.screen', prev); } catch(e){}
+    this.sync();
+  },
+
+  tiles(){
+    return ['https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+      {subdomains:'abc', maxZoom:19, attribution:'&copy; OpenStreetMap contributors · tiles OSM-FR'}];
+  },
+
+  makeMap(el, opts){
+    const [url, o] = this.tiles();
+    const m = L.map(el, {zoomControl:false, attributionControl:true, scrollWheelZoom:false});
+    L.tileLayer(url, o).addTo(m);
+    const line = L.polyline(this.route, {color:'#0d8a7f', weight:5, opacity:.9, lineCap:'round'}).addTo(m);
+    L.circleMarker(this.route[this.route.length-1], {radius:8, color:'#fff', weight:3, fillColor:'#14181a', fillOpacity:1}).addTo(m);
+    const icon = L.divIcon({className:'', iconSize:[34,34], iconAnchor:[17,17],
+      html:'<div style="width:34px;height:34px;border-radius:50%;background:#0d8a7f;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;color:#fff;font:600 14px/1 sans-serif">ช</div>'});
+    const marker = L.marker(this.pointAt(this.t), {icon}).addTo(m);
+    m.fitBounds(line.getBounds(), {paddingTopLeft:[30, opts.padTop], paddingBottomRight:[30, opts.padBottom]});
+    return {m, marker, el};
+  },
+
+  ensureMap(name, elId, opts){
+    const el = document.getElementById(elId);
+    const cur = this.maps[name];
+    if (!el || el.offsetParent === null){ if (cur){ cur.m.remove(); delete this.maps[name]; } return; }
+    if (cur && cur.el === el){ cur.m.invalidateSize(); return; }
+    if (cur) cur.m.remove();
+    this.maps[name] = this.makeMap(el, opts);
+    setTimeout(()=>{ if (this.maps[name]) this.maps[name].m.invalidateSize(); }, 250);
+  },
+
+  ensureHomeMap(){
+    const el = document.getElementById('ref-mapHome');
+    if (!el || el.offsetParent === null){ if (this.homeMap){ this.homeMap.remove(); this.homeMap = null; this.homeEl = null; } return; }
+    if (this.homeMap && this.homeEl === el){ this.homeMap.invalidateSize(); return; }
+    if (this.homeMap) this.homeMap.remove();
+    const [url,o] = this.tiles();
+    const hm = L.map(el, {zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false});
+    L.tileLayer(url,o).addTo(hm);
+    hm.setView(this.route[this.route.length-1], 16);
+    L.circleMarker(this.route[this.route.length-1], {radius:7, color:'#fff', weight:3, fillColor:'#0d8a7f', fillOpacity:1}).addTo(hm);
+    this.homeMap = hm; this.homeEl = el;
+    setTimeout(()=>hm.invalidateSize(), 250);
+  },
+
+  pointAt(t){
+    const segs = this.route.length - 1;
+    const f = Math.min(Math.max(t,0),0.999) * segs;
+    const i = Math.floor(f), r = f - i;
+    const a = this.route[i], b = this.route[i+1];
+    return [a[0]+(b[0]-a[0])*r, a[1]+(b[1]-a[1])*r];
+  },
+
+  sync(){
+    if (typeof L === 'undefined'){ setTimeout(()=>this.sync(), 300); return; }
+    this.ensureMap('cust', 'ref-mapCust', {padTop:130, padBottom:270});
+    this.ensureMap('tech', 'ref-mapTech', {padTop:30, padBottom:30});
+    this.ensureHomeMap();
+    this.initSig();
+    if (this.lang === 'en') this.applyLang('en');
+  },
+
+  init(){
+    let saved = null;
+    try { saved = localStorage.getItem('syneye.screen'); } catch(e){}
+    if (saved && this.keys.indexOf(saved) >= 0) this.state.screen = saved;
+    this.showScreen(this.state.screen);
+
+    this.timer = setInterval(()=>this.tick(), 1200);
+    window.addEventListener('popstate', () => {
+      const prev = this.stack.pop() || 'launcher';
+      this.state.screen = prev;
+      this.showScreen(prev);
+      this.sync();
+    });
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.installEvt = e; });
+    window.addEventListener('appinstalled', () => { this.installEvt = null; this.toast('ติดตั้ง SynEye เรียบร้อย เปิดจากหน้าจอหลักได้เลย'); });
+    this.sync();
+  },
+
+  tick(){
+    this.t += 0.012;
+    if (this.t > 0.96) this.t = 0.05;
+    const p = this.pointAt(this.t);
+    Object.keys(this.maps).forEach(k => this.maps[k].marker.setLatLng(p));
+    const remain = 1 - this.t;
+    const mins = Math.max(1, Math.round(remain * 31));
+    const km = (remain * 5.4).toFixed(1);
+    const en = this.lang === 'en';
+    const etaNum = this.el('etaNum');
+    const distText = this.el('distText');
+    if (etaNum) etaNum.textContent = mins;
+    if (distText) distText.textContent = en ? (km+' km away · on Lat Krabang Rd.') : ('ห่าง '+km+' กม. · อยู่บนถนนลาดกระบัง');
+  },
+
+  initSig(){
+    const c = this.el('sigCanvas');
+    if (!c || c === this.sigEl) return;
+    this.sigEl = c;
+    const ctx = c.getContext('2d');
+    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#14181a';
+    let drawing = false;
+    const pos = e => {
+      const r = c.getBoundingClientRect();
+      return [(e.clientX-r.left)*(c.width/r.width), (e.clientY-r.top)*(c.height/r.height)];
+    };
+    c.addEventListener('pointerdown', e => { drawing = true; ctx.beginPath(); ctx.moveTo.apply(ctx, pos(e)); e.preventDefault(); });
+    c.addEventListener('pointermove', e => { if(!drawing) return; ctx.lineTo.apply(ctx, pos(e)); ctx.stroke(); e.preventDefault(); });
+    window.addEventListener('pointerup', () => { drawing = false; });
+    this.sigCtx = ctx;
+  },
+
+  toast(msg){
+    const d = document.createElement('div');
+    d.textContent = msg;
+    d.setAttribute('style','position:fixed;left:16px;right:16px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:9999;background:#14181a;color:#fff;font:400 14px/1.5 inherit;padding:14px 16px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.28);text-align:center');
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(), 5200);
+  },
+
+  install(){
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (standalone){ this.toast('ติดตั้งไว้แล้ว เปิดจากไอคอนบนหน้าจอหลักได้เลย'); return; }
+    if (this.installEvt){
+      this.installEvt.prompt();
+      this.installEvt.userChoice && this.installEvt.userChoice.then(()=>{ this.installEvt = null; });
+      return;
+    }
+    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    this.toast(ios ? 'กดปุ่มแชร์ด้านล่างของ Safari แล้วเลือก "Add to Home Screen"'
+                   : 'เปิดเมนู ⋮ ของเบราว์เซอร์ แล้วเลือก "ติดตั้งแอป" หรือ "เพิ่มลงหน้าจอหลัก"');
+  },
+
+  clearSig(){ if (this.sigCtx && this.sigEl) this.sigCtx.clearRect(0,0,this.sigEl.width,this.sigEl.height); },
+
+  applyLang(to){
+    document.querySelectorAll('[data-en]').forEach(el => {
+      if (el.dataset.langBtn) return;
+      if (!el.dataset.th) el.dataset.th = el.textContent;
+      el.textContent = to === 'en' ? el.dataset.en : el.dataset.th;
+    });
+  },
+
+  toggleLang(e){
+    const btn = e.currentTarget;
+    btn.dataset.langBtn = '1';
+    const to = this.lang === 'en' ? 'th' : 'en';
+    this.lang = to;
+    this.applyLang(to);
+    btn.textContent = to === 'en' ? 'ไทย' : 'EN';
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+
+</script>
+</body>
+</html>
